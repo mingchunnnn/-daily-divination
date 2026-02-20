@@ -1,0 +1,1075 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>魔法占卜抽籤</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --card:#101a35cc;
+      --stroke:#2b3a6b;
+      --gold:#f7d37a;
+      --text:#e9eeff;
+      --muted:#b9c3ff;
+      --glow: 0 0 24px rgba(247,211,122,.25);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      padding:24px;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 600px at 20% 10%, rgba(123,92,255,.18), transparent 60%),
+        radial-gradient(900px 500px at 80% 30%, rgba(255,196,92,.14), transparent 55%),
+        radial-gradient(700px 600px at 40% 90%, rgba(92,255,214,.10), transparent 60%),
+        linear-gradient(180deg, #070a14, var(--bg));
+      overflow:auto;
+      font-family: ui-serif, "Iowan Old Style", "Palatino Linotype", "Songti TC", "Noto Serif TC", serif;
+    }
+
+    /* sparkles */
+    .sparkle{
+      position:absolute;
+      width:2px;height:2px;
+      background:rgba(255,255,255,.8);
+      border-radius:50%;
+      filter: drop-shadow(0 0 8px rgba(255,255,255,.6));
+      animation: drift linear infinite;
+      opacity:.8;
+    }
+    @keyframes drift{
+      from{ transform: translateY(120vh) translateX(0); opacity:0 }
+      10%{ opacity:.8 }
+      80%{ opacity:.6 }
+      to{ transform: translateY(-20vh) translateX(40px); opacity:0 }
+    }
+
+    .wrap{ width:min(880px, 100%); position:relative; }
+    .title{
+      text-align:center;
+      letter-spacing:.08em;
+      font-weight:800;
+      font-size:clamp(26px, 4.5vw, 42px);
+      margin:0 0 10px;
+      text-shadow: var(--glow);
+    }
+    .subtitle{
+      text-align:center;
+      margin:0 0 18px;
+      color:var(--muted);
+      line-height:1.6;
+      font-size:clamp(14px, 2.5vw, 16px);
+    }
+
+    .card{
+      position:relative;
+      border:1px solid rgba(247,211,122,.28);
+      background: linear-gradient(180deg, rgba(16,26,53,.75), rgba(16,26,53,.35));
+      border-radius:18px;
+      padding:18px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55), var(--glow);
+      backdrop-filter: blur(10px);
+      overflow:hidden;
+    }
+    .card:before{
+      content:"";
+      position:absolute; inset:-2px;
+      background: radial-gradient(circle at 30% 20%, rgba(247,211,122,.35), transparent 40%),
+                  radial-gradient(circle at 70% 80%, rgba(123,92,255,.30), transparent 45%);
+      filter: blur(12px);
+      opacity:.9;
+      pointer-events:none;
+    }
+
+    .panel{
+      position:relative;
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap:14px;
+    }
+    @media (max-width: 820px){
+      .panel{ grid-template-columns: 1fr; }
+    }
+
+    .box{
+      border:1px solid rgba(43,58,107,.8);
+      border-radius:16px;
+      padding:14px;
+      background: rgba(8,12,26,.55);
+    }
+    .box h3{
+      margin:0 0 10px;
+      font-size:16px;
+      color:var(--gold);
+      letter-spacing:.06em;
+    }
+
+    .inputRow{
+      display:flex;
+      gap:10px;
+      align-items:stretch;
+      margin-bottom:12px;
+    }
+    .inputRow input{
+      flex:1;
+      border-radius:12px;
+      border:1px solid rgba(247,211,122,.22);
+      background: rgba(16,26,53,.35);
+      color: var(--text);
+      padding:12px 12px;
+      font-size:15px;
+      outline:none;
+    }
+    .inputRow input::placeholder{ color: rgba(185,195,255,.7); }
+
+    .orb{
+      height:260px;
+      border-radius:18px;
+      border:1px solid rgba(247,211,122,.22);
+      background:
+        radial-gradient(140px 140px at 30% 30%, rgba(255,255,255,.16), transparent 60%),
+        radial-gradient(200px 200px at 70% 70%, rgba(123,92,255,.18), transparent 62%),
+        radial-gradient(180px 180px at 50% 50%, rgba(247,211,122,.10), transparent 70%),
+        linear-gradient(180deg, rgba(15,20,45,.65), rgba(10,12,25,.35));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      text-align:center;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .mist{
+      position:absolute; inset:-40px;
+      background: radial-gradient(circle at 20% 30%, rgba(123,92,255,.16), transparent 55%),
+                  radial-gradient(circle at 70% 60%, rgba(247,211,122,.14), transparent 55%),
+                  radial-gradient(circle at 40% 80%, rgba(140,255,214,.10), transparent 60%);
+      filter: blur(10px);
+      animation: swirl 6s ease-in-out infinite;
+      opacity:.9;
+    }
+    @keyframes swirl{
+      0%,100%{ transform: translate3d(0,0,0) scale(1); }
+      50%{ transform: translate3d(12px,-10px,0) scale(1.05); }
+    }
+
+    .resultWrap{
+      position:relative;
+      z-index:2;
+      width:100%;
+      max-width: 560px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .headline{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      margin-top:4px;
+    }
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border-radius:999px;
+      padding:6px 12px;
+      font-weight:800;
+      letter-spacing:.08em;
+      border:1px solid rgba(247,211,122,.28);
+      background: rgba(16,26,53,.40);
+      color: var(--gold);
+      box-shadow: 0 0 18px rgba(247,211,122,.10);
+      font-size:14px;
+      white-space:nowrap;
+    }
+    .stamp{
+      font-weight:900;
+      letter-spacing:.12em;
+      font-size: clamp(18px, 3.6vw, 26px);
+      color:#fff;
+      text-shadow: 0 0 18px rgba(247,211,122,.25);
+      white-space:nowrap;
+    }
+    .answer{
+      color: rgba(233,238,255,.95);
+      line-height:1.75;
+      font-size: 15px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(43,58,107,.55);
+      background: rgba(8,12,26,.40);
+      text-align:left;
+      white-space:pre-wrap;
+      max-height:220px;
+      overflow:auto;
+      word-break:break-word;
+    }
+    .hint{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.7;
+    }
+
+    .side{
+      border:1px solid rgba(43,58,107,.8);
+      border-radius:16px;
+      padding:14px;
+      background: rgba(8,12,26,.45);
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .btn{
+      appearance:none;
+      border:none;
+      border-radius:14px;
+      padding:14px 16px;
+      font-weight:900;
+      letter-spacing:.10em;
+      cursor:pointer;
+      color:#1a1405;
+      background: linear-gradient(180deg, #ffe29a, #f7d37a);
+      box-shadow: 0 10px 22px rgba(0,0,0,.35), 0 0 26px rgba(247,211,122,.18);
+      transition: transform .08s ease, filter .2s ease;
+      user-select:none;
+    }
+    .btn:active{ transform: translateY(1px) scale(.99); }
+    .btn[disabled]{ opacity:.65; cursor:not-allowed; filter:saturate(.75); }
+
+    .btnGhost{
+      appearance:none;
+      border-radius:14px;
+      padding:12px 14px;
+      font-weight:800;
+      letter-spacing:.08em;
+      cursor:pointer;
+      color: var(--text);
+      background: rgba(16,26,53,.35);
+      border:1px solid rgba(247,211,122,.20);
+    }
+    .row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .tags{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    .tag{
+      border:1px solid rgba(247,211,122,.22);
+      color:var(--muted);
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:12px;
+      background: rgba(16,26,53,.35);
+    }
+
+    .shake{ animation: shake .6s ease; }
+    @keyframes shake{
+      0%{ transform: translateX(0) }
+      15%{ transform: translateX(-6px) }
+      30%{ transform: translateX(6px) }
+      45%{ transform: translateX(-4px) }
+      60%{ transform: translateX(4px) }
+      75%{ transform: translateX(-2px) }
+      90%{ transform: translateX(2px) }
+      100%{ transform: translateX(0) }
+    }
+
+    .history{
+      margin-top:10px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .historyItem{
+      border:1px solid rgba(43,58,107,.55);
+      background: rgba(8,12,26,.35);
+      border-radius:14px;
+      padding:10px 12px;
+    }
+    .historyTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-bottom:8px;
+    }
+    .historyQ{
+      color: rgba(233,238,255,.92);
+      font-weight:800;
+      letter-spacing:.02em;
+      font-size:13px;
+      word-break:break-word;
+    }
+    .historyMeta{
+      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+      color: rgba(185,195,255,.85);
+      font-size:12px;
+      white-space:nowrap;
+    }
+    .footer{
+      margin-top:14px;
+      text-align:center;
+      color:rgba(233,238,255,.7);
+      font-size:12px;
+      line-height:1.6;
+    }
+
+    .soundToggle{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(247,211,122,.20);
+      background: rgba(16,26,53,.30);
+      color: rgba(233,238,255,.9);
+      font-size:13px;
+    }
+    .switch{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      user-select:none;
+    }
+  
+    .switch input{ width:18px; height:18px; }
+    /* =========================
+   Mobile first improvements
+   ========================= */
+
+/* iOS 捲動更順 */
+    .answer, body{
+      -webkit-overflow-scrolling: touch;
+    }
+
+/* 手機：單欄、間距更舒服、字更大、按鈕更好按 */
+@media (max-width: 820px){
+  body{
+    padding: 14px;
+  }
+
+  .wrap{
+    width: 100%;
+  }
+
+  .card{
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .panel{
+    grid-template-columns: 1fr;  /* 強制單欄 */
+    gap: 12px;
+  }
+
+  .title{
+    font-size: 28px;
+  }
+
+  .subtitle{
+    font-size: 14px;
+    margin-bottom: 14px;
+  }
+
+  /* 輸入區：改成上下排列，避免太擠 */
+  .inputRow{
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .inputRow input{
+    font-size: 16px; /* iOS 避免自動放大/縮放怪異 */
+    padding: 12px 12px;
+  }
+
+  .btn{
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 16px;
+  }
+
+  .btnGhost{
+    flex: 1;
+    min-width: 140px;
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+
+  /* 水晶球結果區：讓它在手機更好讀 */
+  .orb{
+    height: auto;
+    min-height: 260px;
+    padding: 14px;
+  }
+
+  .headline{
+    gap: 8px;
+  }
+
+  .badge{
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+
+  .stamp{
+    font-size: 20px;
+  }
+
+  /* 建議文字：手機給更大高度 */
+  .answer{
+    max-height: 320px;
+    font-size: 15px;
+  }
+
+  /* 右側工具區塊 */
+  .side{
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .soundToggle{
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+
+  /* 抽籤紀錄：每筆更緊湊 */
+  .historyItem{
+    padding: 10px 10px;
+  }
+  .historyQ{
+    font-size: 13px;
+  }
+  .historyMeta{
+    font-size: 12px;
+  }
+}
+
+/* 更小手機（例如 SE）：再緊一點 */
+@media (max-width: 380px){
+  .title{ font-size: 24px; }
+  .stamp{ font-size: 18px; }
+  .answer{ max-height: 280px; }
+}
+  </style>
+</head>
+
+<body>
+  <div id="sparkles"></div>
+
+  <div class="wrap">
+    <h1 class="title">魔法占卜抽籤</h1>
+    <p class="subtitle">
+      先把你的問題打進去，再按下抽籤。<br/>
+      會同時給你「大吉 / 中吉 / 小吉」與一段融合你問題的建議。
+    </p>
+
+    <div class="card">
+      <div class="panel">
+        <!-- Left -->
+        <div class="box">
+          <h3>咒語輸入</h3>
+          <div class="inputRow">
+            <input id="qInput" type="text" maxlength="80"
+              placeholder="例如：我要不要換工作？ / 要不要跟他告白？ / 這個決定會不會後悔？" />
+            <button id="drawBtn" class="btn" title="抽籤">✨ 抽籤</button>
+          </div>
+
+          <div id="orb" class="orb" aria-live="polite">
+            <div class="mist" aria-hidden="true"></div>
+
+            <div class="resultWrap">
+              <div class="headline">
+                <span id="luckBadge" class="badge">等你提問</span>
+                <span id="stamp" class="stamp">按下抽籤開始</span>
+              </div>
+              <div id="answer" class="answer">把問題放進去，抽籤會把它變成一段可行的行動建議。</div>
+            </div>
+          </div>
+
+          <div class="hint" id="detail">
+            小技巧：抽到「再想想 / 先觀望」時，把問題改成「我現在最缺的關鍵資訊是什麼？」再抽一次。
+          </div>
+        </div>
+
+        <!-- Right -->
+        <div class="side">
+          <div class="soundToggle">
+            <div>🔊 進站背景音樂（過年風）</div>
+            <label class="switch">
+              <span>開</span>
+              <input id="bgmToggle" type="checkbox" checked />
+            </label>
+          </div>
+
+          <div class="soundToggle">
+            <div>✨ 抽籤音效</div>
+            <label class="switch">
+              <span>開</span>
+              <input id="sfxToggle" type="checkbox" checked />
+            </label>
+          </div>
+
+          <div class="row">
+            <button id="copyBtn" class="btnGhost">📋 複製這次結果</button>
+            <button id="clearBtn" class="btnGhost">🧹 清空紀錄</button>
+          </div>
+
+          <div class="tags" aria-label="選項預覽">
+            <div class="tag">放心去做！</div>
+            <div class="tag">再想想吧</div>
+            <div class="tag">千萬別去</div>
+            <div class="tag">努力看看</div>
+            <div class="tag">先觀望</div>
+            <div class="tag">問問別人</div>
+          </div>
+
+          <div class="box">
+            <h3>抽籤紀錄</h3>
+            <div id="history" class="history">
+              <div class="hint">目前沒有紀錄。抽完會自動出現在這裡。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        Wizarding vibes only ✦ 以「魔法學院氛圍」設計，未使用任何版權角色素材
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ====== 星光 ======
+    const sparkleWrap = document.getElementById('sparkles');
+    const sparkleCount = 45;
+    for(let i=0;i<sparkleCount;i++){
+      const s = document.createElement('div');
+      s.className = 'sparkle';
+      const left = Math.random()*100;
+      const dur = 6 + Math.random()*10;
+      const delay = Math.random()*-12;
+      const size = 1 + Math.random()*2;
+      s.style.left = left + 'vw';
+      s.style.animationDuration = dur + 's';
+      s.style.animationDelay = delay + 's';
+      s.style.width = size + 'px';
+      s.style.height = size + 'px';
+      sparkleWrap.appendChild(s);
+    }
+
+    // ====== 音效/音樂（用 WebAudio 生成，不用外部檔案）======
+    let audioCtx = null;
+
+    function getAudioCtx(){
+      if(!audioCtx){
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      return audioCtx;
+    }
+
+    // 簡單「抽籤叮」音效
+    function playSfx(){
+      if(!document.getElementById('sfxToggle').checked) return;
+      const ctx = getAudioCtx();
+      const now = ctx.currentTime;
+
+      const master = ctx.createGain();
+      master.gain.setValueAtTime(0.0001, now);
+      master.gain.exponentialRampToValueAtTime(0.35, now + 0.01);
+      master.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+      master.connect(ctx.destination);
+
+      const o1 = ctx.createOscillator();
+      o1.type = 'triangle';
+      o1.frequency.setValueAtTime(880, now);
+      o1.frequency.exponentialRampToValueAtTime(1320, now + 0.08);
+      o1.frequency.exponentialRampToValueAtTime(990, now + 0.25);
+      o1.connect(master);
+      o1.start(now);
+      o1.stop(now + 0.55);
+
+      const o2 = ctx.createOscillator();
+      o2.type = 'sine';
+      o2.frequency.setValueAtTime(1760, now + 0.02);
+      o2.frequency.exponentialRampToValueAtTime(880, now + 0.20);
+      const g2 = ctx.createGain();
+      g2.gain.setValueAtTime(0.0001, now);
+      g2.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
+      g2.gain.exponentialRampToValueAtTime(0.0001, now + 0.30);
+      o2.connect(g2); g2.connect(ctx.destination);
+      o2.start(now);
+      o2.stop(now + 0.32);
+    }
+
+    // 背景音樂：簡單「過年/喜氣」感（五聲音階 + 鈴音）
+    let bgmTimer = null;
+    function startBgm(){
+      if(bgmTimer) return;
+      const ctx = getAudioCtx();
+
+      const scale = [261.63, 293.66, 329.63, 392.00, 440.00]; // C D E G A (五聲感)
+      let step = 0;
+
+      bgmTimer = setInterval(() => {
+        if(!document.getElementById('bgmToggle').checked) return;
+
+        const now = ctx.currentTime;
+
+        // 主音（像小鈴鐺）
+        const o = ctx.createOscillator();
+        o.type = 'sine';
+        const f = scale[step % scale.length] * (step % 10 === 0 ? 2 : 1);
+        o.frequency.setValueAtTime(f, now);
+
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.06, now + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+
+        o.connect(g); g.connect(ctx.destination);
+        o.start(now); o.stop(now + 0.36);
+
+        // 偶爾加一個低音「咚」
+        if(step % 8 === 0){
+          const b = ctx.createOscillator();
+          b.type = 'triangle';
+          b.frequency.setValueAtTime(130.81, now); // C3
+          const gb = ctx.createGain();
+          gb.gain.setValueAtTime(0.0001, now);
+          gb.gain.exponentialRampToValueAtTime(0.05, now + 0.01);
+          gb.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+          b.connect(gb); gb.connect(ctx.destination);
+          b.start(now); b.stop(now + 0.26);
+        }
+
+        step++;
+      }, 420); // 節奏感
+    }
+
+    function stopBgm(){
+      if(bgmTimer){
+        clearInterval(bgmTimer);
+        bgmTimer = null;
+      }
+    }
+
+    // iOS/瀏覽器限制：需使用者互動後才能播放音訊
+    function ensureAudioUnlocked(){
+      const ctx = getAudioCtx();
+      if(ctx.state === 'suspended') ctx.resume();
+    }
+
+    // ====== 抽籤邏輯（含 大吉/中吉/小吉 + 融合問題回答）======
+    const options = [
+      { key: "放心去做！", tone: "go" },
+      { key: "再想想吧", tone: "think" },
+      { key: "千萬別去", tone: "stop" },
+      { key: "努力看看", tone: "try" },
+      { key: "先觀望", tone: "wait" },
+      { key: "問問別人", tone: "ask" },
+    ];
+    
+    // ====== 問題類型判斷（感情/工作/金錢/人際/健康/其他）======
+const CATEGORY = {
+  love: "感情",
+  work: "工作/學業",
+  money: "金錢",
+  social: "人際",
+  health: "健康",
+  general: "其他"
+};
+
+function detectCategory(question){
+  const q = (question || "").toLowerCase();
+
+  const has = (...keys) => keys.some(k => q.includes(k));
+
+  // 感情
+  if (has("告白","喜歡","曖昧","復合","分手","前任","交往","約會","戀愛","感情","他","她","對方","另一半","結婚","婚","劈腿","小三","相處","冷戰","吵架","追","被拒")) {
+    return CATEGORY.love;
+  }
+  // 工作/學業
+  if (has("工作","換工作","離職","轉職","offer","面試","升遷","主管","同事","實習","職涯","薪資","薪水","加薪","公司",
+          "考試","讀書","學業","報告","期末","研究","論文","申請","科系","轉系","學校","課程","成績")) {
+    return CATEGORY.work;
+  }
+  // 金錢
+  if (has("錢","存錢","投資","股票","基金","加密","虛擬貨幣","比特幣","房","租","買","理財","貸款","刷卡","信用卡","負債","欠","繳費","花費","預算","開店","創業")) {
+    return CATEGORY.money;
+  }
+  // 人際
+  if (has("朋友","同學","同事","家人","爸","媽","父母","長輩","室友","同住","相處","關係","溝通","衝突","被討厭","被排擠","尷尬","誤會","道歉","和好","界線")) {
+    return CATEGORY.social;
+  }
+  // 健康（避免太像醫療建議：只做生活型提醒）
+  if (has("健康","生病","失眠","焦慮","壓力","胃","頭痛","睡","疲勞","運動","飲食","減肥","暴食","作息","看醫生")) {
+    return CATEGORY.health;
+  }
+  return CATEGORY.general;
+}
+
+// 每個類型的「語氣素材」：用來讓回答更貼題
+const CATEGORY_STYLE = {
+  [CATEGORY.love]: {
+    focus: [
+      "重點不在你做不做，而在你怎麼做、用什麼節奏做。",
+      "先確認對方的回應訊號，再決定你要推進多少。",
+      "把『你想要的關係』講清楚，比猜更有效。"
+    ],
+    next: [
+      "下一步：把你想說的一句話先寫下來（越短越好），再決定要不要送出去。",
+      "下一步：先做一個低風險的互動（邀約/聊天），觀察對方是否願意接球。",
+      "下一步：訂一個期限；到那天仍不明朗，就把選擇權拿回自己身上。"
+    ]
+  },
+  [CATEGORY.work]: {
+    focus: [
+      "這題的關鍵是成本：時間成本、學習成本、機會成本。",
+      "先把你最在意的 1–2 個指標訂清楚（薪資/成長/環境/自由度）。",
+      "別用情緒做決策，用條件做決策。"
+    ],
+    next: [
+      "下一步：列 3 個必要條件 + 3 個加分條件，對照現況就會清楚很多。",
+      "下一步：做一個可驗證的行動（投履歷/問內推/約資訊面談）而不是空想。",
+      "下一步：設一個 2 週實驗期：你只需要驗證一件最關鍵的事。"
+    ]
+  },
+  [CATEGORY.money]: {
+    focus: [
+      "金錢題最怕衝動；先確保你不會因為一個決定把自己逼到窄巷。",
+      "先把風險上限定出來：你最多能承受多少損失/壓力？",
+      "能用『小額試水溫』的，就不要一次梭哈。"
+    ],
+    next: [
+      "下一步：先把一個月現金流寫出來（收入/固定支出/可動用），再做決定。",
+      "下一步：如果是投資：先用小額/分批，並寫下你退出的條件。",
+      "下一步：找一個你信任且理性的人，把你的計畫講一次，專挑漏洞。"
+    ]
+  },
+  [CATEGORY.social]: {
+    focus: [
+      "人際題常常不是誰對誰錯，是界線與期待沒說清楚。",
+      "你要的是被理解，還是事情被解決？先選一個。",
+      "先把你能接受與不能接受的底線講明白。"
+    ],
+    next: [
+      "下一步：用『我感覺…我需要…』開頭，比指責更容易被聽見。",
+      "下一步：先把衝突縮小成一件事，不要一次算總帳。",
+      "下一步：如果你已經很累，先拉開距離也可以，等情緒降再談。"
+    ]
+  },
+  [CATEGORY.health]: {
+    focus: [
+      "健康題我不替你做醫療判斷，但我會幫你把行動變簡單、可執行。",
+      "把目標縮到『今天做得到』，身體最吃得下。",
+      "如果狀況持續或變嚴重，優先找專業協助。"
+    ],
+    next: [
+      "下一步：把作息往『固定起床』靠攏，比逼自己早睡更有效。",
+      "下一步：把運動降到 10 分鐘也行，重點是建立連續性。",
+      "下一步：若症狀影響生活，請把狀況記錄下來（時間/誘因/程度）方便諮詢。"
+    ]
+  },
+  [CATEGORY.general]: {
+    focus: [
+      "把這題拆小，你會更容易做選擇。",
+      "你現在需要的不是更多想法，是一個能驗證的下一步。",
+      "先做最小行動，答案常常會自己浮出來。"
+    ],
+    next: [
+      "下一步：把選項寫成 A/B，然後各做一個 10 分鐘的小行動測試。",
+      "下一步：問自己『如果一年後回看，我希望我怎麼選？』",
+      "下一步：如果你還卡住，把問題改成『我現在最缺的資訊是什麼？』再抽一次。"
+    ]
+  }
+};
+
+
+    // 權重：大吉較少、小吉較常見（你可改）
+    const luckPool = [
+      { luck: "大吉", w: 18 },
+      { luck: "中吉", w: 32 },
+      { luck: "小吉", w: 50 },
+    ];
+
+    function pickWeighted(pool){
+      const total = pool.reduce((s,x)=>s+x.w,0);
+      let r = Math.random()*total;
+      for(const item of pool){
+        r -= item.w;
+        if(r <= 0) return item.luck;
+      }
+      return pool[pool.length-1].luck;
+    }
+
+    function pickOne(arr){
+      return arr[Math.floor(Math.random()*arr.length)];
+    }
+
+    function nowStr(){
+      const d = new Date();
+      const pad = n => String(n).padStart(2,'0');
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
+    function sanitizeQuestion(q){
+      q = (q || "").trim();
+      if(!q) return "";
+      // 避免太長顯示爆炸
+      if(q.length > 80) q = q.slice(0, 80) + "…";
+      return q;
+    }
+
+    // 讓回答真的「融合你的問題」：用模板拼成自然語句
+    function buildAnswer(question, luck, option){
+  const qRaw = (question || "").trim();
+  const q = (qRaw.endsWith("？") || qRaw.endsWith("?")) ? qRaw : (qRaw + "？");
+
+  const category = detectCategory(qRaw);
+  const style = CATEGORY_STYLE[category] || CATEGORY_STYLE[CATEGORY.general];
+
+  const openers = [
+    `你問「${q}」`,
+    `關於「${q}」這題`,
+    `就「${q}」這件事`
+  ];
+
+  const luckLine = {
+    "大吉": "今天的氣場偏順，適合下決定、推進、收尾。",
+    "中吉": "可行性不錯，但需要你多做一步確認，避免後面反覆。",
+    "小吉": "不是壞，只是更看重『步驟』與『時機』，別衝太快。"
+  }[luck];
+
+  const actionMap = {
+    go: [
+      "我的建議是：可以做，而且越拖越容易焦慮。",
+      "我的建議是：就朝這方向走，重點是把第一步做小、做快。",
+      "我的建議是：放手去推進，但記得留退路。"
+    ],
+    think: [
+      "我的建議是：先別急著拍板，你缺的是一個關鍵資訊。",
+      "我的建議是：暫停 24 小時，把選項寫成『利/弊/最壞情境』再決定。",
+      "我的建議是：先把風險列出來，能接受再做。"
+    ],
+    stop: [
+      "我的建議是：先避開，這題現在代價偏高。",
+      "我的建議是：不要做，至少不要用你原本那個方式做。",
+      "我的建議是：停一下，換條路會更安全。"
+    ],
+    try: [
+      "我的建議是：值得努力，但要設定期限與里程碑，避免空耗。",
+      "我的建議是：可以拼看看；把目標拆成 3 個小步驟去做。",
+      "我的建議是：別只靠意志力，做一個可量化的計畫。"
+    ],
+    wait: [
+      "我的建議是：先觀望，給自己一個『再評估日期』。",
+      "我的建議是：暫時不動，等條件成熟（或資訊到位）再出手。",
+      "我的建議是：先把資源準備好，時機到再做會更順。"
+    ],
+    ask: [
+      "我的建議是：找一位懂的人問『一個具體問題』，別泛聊。",
+      "我的建議是：去問兩個立場不同的人，看看盲點在哪。",
+      "我的建議是：先蒐集外部回饋，再回來做最後決定。"
+    ]
+  };
+
+  const pickOne = (arr) => arr[Math.floor(Math.random()*arr.length)];
+
+  return [
+    pickOne(openers),
+    `【領域】${category}`,
+    `【${luck}】${luckLine}`,
+    `【籤文】${option.key}`,
+    pickOne(style.focus),
+    pickOne(actionMap[option.tone]),
+    pickOne(style.next),
+    "記住：你要的不是完美答案，是一個你能承擔的選擇。"
+  ].join("\n");
+}
+
+    // ====== UI 互動 ======
+    const qInput = document.getElementById('qInput');
+    const drawBtn = document.getElementById('drawBtn');
+    const resultStamp = document.getElementById('stamp');
+    const luckBadge = document.getElementById('luckBadge');
+    const answerEl = document.getElementById('answer');
+    const orb = document.getElementById('orb');
+    const historyEl = document.getElementById('history');
+    const copyBtn = document.getElementById('copyBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const bgmToggle = document.getElementById('bgmToggle');
+
+    let lastResultText = "";
+    let history = [];
+
+    function renderHistory(){
+      if(history.length === 0){
+        historyEl.innerHTML = `<div class="hint">目前沒有紀錄。抽完會自動出現在這裡。</div>`;
+        return;
+      }
+      historyEl.innerHTML = history.map((h, idx) => `
+        <div class="historyItem">
+          <div class="historyTop">
+            <div class="historyQ">Q${history.length-idx}. ${escapeHtml(h.question)}</div>
+            <div class="historyMeta">
+              <span class="badge">${h.luck}</span>
+              <span class="tag">${escapeHtml(h.stamp)}</span>
+              <span>${h.time}</span>
+            </div>
+          </div>
+          <div class="answer">${escapeHtml(h.answer)}</div>
+        </div>
+      `).join("");
+    }
+
+    function escapeHtml(s){
+      return String(s)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function animateDraw(finalLuck, finalOpt, finalAnswer){
+      drawBtn.disabled = true;
+      orb.classList.remove('shake');
+      void orb.offsetWidth;
+      orb.classList.add('shake');
+
+      const spinMs = 900;
+      const tick = 70;
+      let t = 0;
+
+      const timer = setInterval(() => {
+        const o = options[Math.floor(Math.random()*options.length)];
+        const l = pickWeighted(luckPool);
+        luckBadge.textContent = l;
+        resultStamp.textContent = o.key;
+        t += tick;
+
+        if(t >= spinMs){
+          clearInterval(timer);
+          luckBadge.textContent = finalLuck;
+          resultStamp.textContent = finalOpt.key;
+          answerEl.textContent = finalAnswer;
+          drawBtn.disabled = false;
+        }
+      }, tick);
+    }
+
+    function doDraw(){
+      ensureAudioUnlocked();
+      startBgm(); // 若 toggle 有開就會播放；沒開也不會出聲
+
+      const question = sanitizeQuestion(qInput.value);
+      if(!question){
+        luckBadge.textContent = "請先輸入問題";
+        resultStamp.textContent = "缺少咒語";
+        answerEl.textContent = "先在上方輸入框打入你的問題，再按一次抽籤。例：我要不要換工作？";
+        qInput.focus();
+        return;
+      }
+
+      playSfx();
+
+      const luck = pickWeighted(luckPool);
+      const opt = pickOne(options);
+
+      const answer = buildAnswer(question, luck, opt);
+
+      animateDraw(luck, opt, answer);
+
+      // 記錄（放最上面）
+      const record = {
+        question,
+        luck,
+        stamp: opt.key,
+        answer,
+        time: nowStr()
+      };
+      history.unshift(record);
+      // 最多保留 10 筆
+      history = history.slice(0, 10);
+      renderHistory();
+
+      lastResultText =
+`問題：${question}
+結果：${luck} / ${opt.key}
+——
+${answer}`;
+    }
+
+    // Enter 也能抽
+    qInput.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter') doDraw();
+    });
+    drawBtn.addEventListener('click', doDraw);
+
+    // 複製
+    copyBtn.addEventListener('click', async () => {
+      ensureAudioUnlocked();
+      const text = lastResultText || "你還沒有抽籤結果可以複製。";
+      try{
+        await navigator.clipboard.writeText(text);
+        playSfx();
+        copyBtn.textContent = "✅ 已複製";
+        setTimeout(()=> copyBtn.textContent = "📋 複製這次結果", 900);
+      }catch{
+        // fallback
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+        copyBtn.textContent = "✅ 已複製";
+        setTimeout(()=> copyBtn.textContent = "📋 複製這次結果", 900);
+      }
+    });
+
+    // 清空
+    clearBtn.addEventListener('click', () => {
+      history = [];
+      lastResultText = "";
+      renderHistory();
+      luckBadge.textContent = "已清空";
+      resultStamp.textContent = "重新開始";
+      answerEl.textContent = "把問題放進去，抽籤會把它變成一段可行的行動建議。";
+    });
+
+    // 背景音樂 toggle
+    bgmToggle.addEventListener('change', () => {
+      ensureAudioUnlocked();
+      if(bgmToggle.checked) startBgm();
+      else stopBgm();
+    });
+
+    // 進站就嘗試啟動（但多數瀏覽器會等第一次互動才真的出聲）
+    window.addEventListener('click', () => {
+      ensureAudioUnlocked();
+      startBgm();
+    }, { once:true });
+
+    // 初始
+    renderHistory();
+  </script>
+</body>
+</html>
